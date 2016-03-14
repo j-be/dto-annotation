@@ -11,10 +11,6 @@
 
     <name>mapper-generator</name>
 
-    <properties>
-        <m2e.apt.activation>jdt_apt</m2e.apt.activation>
-    </properties>
-
     <build>
         <plugins>
             <plugin>
