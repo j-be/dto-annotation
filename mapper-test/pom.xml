@@ -24,12 +24,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
-                    <!-- see https://forums.oracle.com/forums/thread.jspa?messageID=4825107 -->
-                    <fork>true</fork>
-                </configuration>
             </plugin>
         </plugins>
     </build>

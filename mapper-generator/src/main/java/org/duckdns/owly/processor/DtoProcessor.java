@@ -3,17 +3,10 @@ package org.duckdns.owly.processor;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.Set;
 
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
+import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -25,7 +18,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
-import javax.tools.JavaFileObject;
+import javax.tools.Diagnostic;
 
 import org.apache.commons.lang.WordUtils;
 import org.apache.velocity.Template;
@@ -36,19 +29,13 @@ import org.duckdns.owly.annotation.Dto;
 @SupportedAnnotationTypes({ "org.duckdns.owly.annotation.Dto" })
 @SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class DtoProcessor extends AbstractProcessor {
-	private static final boolean DEBUG = false;
 	private VelocityEngine velocityEngine = null;
-
-	public DtoProcessor() {
-		super();
-		this.debug("Instanciated");
-	}
 
 	@Override
 	public synchronized void init(javax.annotation.processing.ProcessingEnvironment processingEnv) {
 		super.init(processingEnv);
 		this.initializeVelocity();
-	};
+	}
 
 	@Override
 	public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -56,7 +43,7 @@ public class DtoProcessor extends AbstractProcessor {
 		String targetClassName = null;
 		String sourceClassName = null;
 		String packageName = null;
-		List<String> fields = new ArrayList<String>();
+		List<String> fields = new ArrayList<>();
 
 		this.debug(this.getClass().getSimpleName());
 		for (Element e : roundEnv.getElementsAnnotatedWith(Dto.class)) {
@@ -86,7 +73,7 @@ public class DtoProcessor extends AbstractProcessor {
 		this.debug(fields.toString());
 		if (fqTargetClassName != null)
 			this.generateMappers(packageName + ".mapper", sourceClassName, targetClassName, fields,
-					Arrays.asList(packageName + ".*"));
+					Collections.singletonList(packageName + ".*"));
 
 		return true;
 	}
@@ -110,8 +97,6 @@ public class DtoProcessor extends AbstractProcessor {
 
 	private void generateMappers(String packageName, String sourceClassName, String targetClassName,
 			List<String> fields, List<String> imports) {
-		JavaFileObject jfo = null;
-		Writer writer = null;
 		VelocityContext vc = new VelocityContext();
 
 		vc.put("packageName", packageName);
@@ -122,25 +107,18 @@ public class DtoProcessor extends AbstractProcessor {
 
 		Template vt = this.velocityEngine.getTemplate("dto.vm");
 
-		try {
-			jfo = this.processingEnv.getFiler()
-					.createSourceFile(String.format("%s.%sTo%sMapper", packageName, targetClassName, sourceClassName));
-			writer = jfo.openWriter();
+		try (Writer writer = this.processingEnv.getFiler()
+				.createSourceFile(String.format("%s.%sTo%sMapper", packageName, targetClassName, sourceClassName))
+				.openWriter()) {
 			vt.merge(vc, writer);
 		} catch (IOException e1) {
 			e1.printStackTrace();
-		} finally {
-			try {
-				writer.close();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
 		}
 	}
 
-	protected void debug(String message) {
-		if (DtoProcessor.DEBUG)
-			System.out.println(String.format("%s: %s", this.getClass().getSimpleName(), message));
+	private void debug(String message) {
+		String fullMessage = String.format("%s: %s", this.getClass().getSimpleName(), message);
+		this.processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, fullMessage);
 	}
 
 	private static AnnotationMirror getAnnotationMirror(TypeElement typeElement, String className) {
